@@ -1,0 +1,4 @@
+# depslib dependency file v1.0
+1572554383 source:/home/nairod/Documents/Snake/main.c
+	<ncurses.h>
+
