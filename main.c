@@ -33,7 +33,6 @@ int main(void)
     // Start screen
     if(start())
         menu();
-    //game(1);
 
     endwin();
 
@@ -199,16 +198,15 @@ void game(int level)
         attroff(A_DIM);
 
         // Change direction
-        if( // Cannot change direction to opposite
-        (key == KEY_LEFT && dir != KEY_RIGHT)
-        || (key == KEY_UP && dir != KEY_DOWN)
-        || (key == KEY_RIGHT && dir != KEY_LEFT)
-        || (key == KEY_DOWN && dir != KEY_UP)
+        if((key == KEY_LEFT && dir != KEY_RIGHT)
+            || (key == KEY_UP && dir != KEY_DOWN)
+            || (key == KEY_RIGHT && dir != KEY_LEFT)
+            || (key == KEY_DOWN && dir != KEY_UP)
         )
             dir = key;
 
         field[y][x][0] = body; // Previous head becomes body
-        field[y][x][1] = dir_to_char(dir);
+        field[y][x][1] = dir_to_char(dir); // Save new body part direction
 
         switch(dir){
             case KEY_LEFT:
