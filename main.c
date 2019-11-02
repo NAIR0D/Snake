@@ -16,16 +16,24 @@ int main(void)
     initscr();
     srand(time(NULL));
 
+    // Colors
+    start_color();
+    init_pair(0, COLOR_WHITE, COLOR_BLACK); // Default
+    init_pair(1, COLOR_GREEN, COLOR_GREEN); // Snake
+    init_pair(2, COLOR_RED, COLOR_BLACK); // Food
+    init_pair(3, COLOR_CYAN, COLOR_CYAN); // Borders
+    init_pair(4, COLOR_YELLOW, COLOR_BLACK); // Logo
+
     // Settings
     cbreak();
     noecho();
     keypad(stdscr,TRUE);
     curs_set(FALSE);
 
-    // start screen
-    //if(start())
-        //menu();
-    game(1);
+    // Start screen
+    if(start())
+        menu();
+    //game(1);
 
     endwin();
 
@@ -49,6 +57,7 @@ bool start()
     int start_y = LINES/2 - n_rows/2;
     int start_x = COLS/2 - n_cols/2;
 
+    attron(COLOR_PAIR(4));
     for(int x = start_x; x < start_x + n_cols; x++)
     {
         for(int y = start_y; y < start_y + n_rows; y++)
@@ -59,6 +68,7 @@ bool start()
         refresh();
         usleep(1 * 100000);
     }
+    attroff(COLOR_PAIR(4));
 
     char text[] = "Press ENTER to continue.";
     mvprintw(start_y + n_rows + 3, COLS/2 - strlen(text)/2, "%s", text);
@@ -142,21 +152,14 @@ void game(int level)
     int col_min = col_start + 1, col_max = col_start + n_cols;
     int row_min = row_start + 1, row_max = row_start + n_rows;
 
-    // Draw borders
-    attron(A_STANDOUT);
-    for(int col = col_start; col < col_max + 2; col++)
-        mvprintw(row_start, col, "-");
-    for(int col = col_start; col < col_max + 2; col++)
-        mvprintw(row_start + n_rows + 1, col, "-");
-    for(int row = row_start + 1; row < row_max + 1; row++)
-        mvprintw(row, col_start, "|");
-    for(int row = row_start + 1; row < row_max + 1; row++)
-        mvprintw(row, col_start + n_cols + 1, "|");
-    attroff(A_STANDOUT);
-
-    // Print info
-    mvprintw(LINES - 2, 0, "P : Pause");
-    mvprintw(LINES - 1, 0, "ESC : Exit");
+    // Variables
+    char head = 'H', body = 'B', food = '@';
+    int  y_food = -1, x_food = -1;
+    int color = 0;
+    int key, key_2;
+    int dir = KEY_RIGHT;
+    int score = 0;
+    bool game_over = false;
 
     // Snake current position
     int x = n_cols/4, y= n_rows/2;
@@ -164,31 +167,36 @@ void game(int level)
 
     for(int i = 0; i < 3; i++)
     {
-        field[y][x - i][0] = '0';
+        field[y][x - i][0] = body;
         field[y][x - i][1] = 'R';
     }
 
-    // Variables
-    char head = '>', body = '0', food = '*';
-    int  y_food = -1, x_food = -1;
-    bool got_food = false;
-    int key, key_2;
-    int dir = KEY_RIGHT;
-    int score = 0;
-    bool game_over = false;
-
     // Game loop
-    do{
+    while(1)
+    {
+        clear();
+
         key = getch();
         key_2 = 0;
 
-        // Pause with P
-        if(key == 'p' || key == 'P')
-            do{
-                key_2 = getch();
-            }while(key_2 != 'p' && key_2 != 'P' && key_2 != 27);
-        if(key_2 == 27)
-            break;
+        // Draw borders
+        attron(COLOR_PAIR(3));
+        for(int col = col_start; col < col_max + 2; col++)
+            mvprintw(row_start, col, " ");
+        for(int col = col_start; col < col_max + 2; col++)
+            mvprintw(row_start + n_rows + 1, col, " ");
+        for(int row = row_start + 1; row < row_max + 1; row++)
+            mvprintw(row, col_start, " ");
+        for(int row = row_start + 1; row < row_max + 1; row++)
+            mvprintw(row, col_start + n_cols + 1, " ");
+        attroff(COLOR_PAIR(3));
+
+        // Print info
+        attron(A_DIM);
+        mvprintw(row_start - 2, col_min, "LEVEL %d", level);
+        mvprintw(LINES - 2, 0, "P : Pause");
+        mvprintw(LINES - 1, 0, "ESC : Exit");
+        attroff(A_DIM);
 
         // Change direction
         if( // Cannot change direction to opposite
@@ -203,18 +211,18 @@ void game(int level)
         field[y][x][1] = dir_to_char(dir);
 
         switch(dir){
-            case KEY_LEFT: head = '<';
-                           x = (x > 0) ? x - 1 : n_cols - 1;
-                           break;
-            case KEY_RIGHT: head = '>';
-                            x = (x < n_cols - 1) ? x + 1 : 0;
-                            break;
-            case KEY_UP: head = '^';
-                         y = (y > 0) ? y - 1 : n_rows - 1;
-                         break;
-            case KEY_DOWN: head = 'v';
-                           y = (y < n_rows - 1) ? y + 1 : 0;
-                           break;
+            case KEY_LEFT:
+                x = (x > 0) ? x - 1 : n_cols - 1;
+                break;
+            case KEY_RIGHT:
+                x = (x < n_cols - 1) ? x + 1 : 0;
+                break;
+            case KEY_UP:
+                y = (y > 0) ? y - 1 : n_rows - 1;
+                break;
+            case KEY_DOWN:
+                y = (y < n_rows - 1) ? y + 1 : 0;
+                break;
         }
 
         if(field[y][x][0] == body)
@@ -275,22 +283,57 @@ void game(int level)
         // Draw field
         for(int y = 0; y < n_rows; y++)
             for(int x = 0; x < n_cols; x++)
+            {
+                if(field[y][x][0] == head || field[y][x][0] == body)
+                    color = 1;
+                else if(field[y][x][0] == food)
+                    color = 2;
+                else
+                    color = 0;
+
+                attron(COLOR_PAIR(color));
                 mvprintw(row_min + y, col_min + x, "%c", field[y][x][0]);
+                attroff(COLOR_PAIR(color));
+            }
 
         //Print score
-        attron(A_DIM);
-        mvprintw(row_start - 2, col_start, "SCORE : %d", score);
-        attroff(A_DIM);
+        mvprintw(row_start - 2, col_max - 10, "SCORE : %d", score);
 
         refresh();
 
+        // Pause with P
+        if(key == 'p' || key == 'P')
+        {
+            do{
+                key_2 = getch();
+            }while(key_2 != 'p' && key_2 != 'P' && key_2 != 27);
+        }
+        if(key == 27 || key_2 == 27) // Exit
+            break;
+
         //Pause
-        int delay = 1000000 * 0.5 / level; // Speed increases with level
+        int delay = 1000000 * 0.2 / level; // Speed increases with level
         usleep(delay);
 
-    } while(key != 27);
+    };
 
     nodelay(stdscr, FALSE);
+
+    if(game_over == true)
+    {
+        clear();
+        char str_score[] = "SCORE : ";
+        char text[] = ("Press Enter to continue");
+        mvprintw(LINES/2, COLS/2 - strlen(str_score)/2 - 1, "%s", str_score);
+        mvprintw(LINES/2, COLS/2 + strlen(str_score)/2 - 1, "%d", score);
+        attron(A_DIM);
+        mvprintw(LINES/2 + 2, COLS/2 - strlen(text)/2, "%s", text);
+        attroff(A_DIM);
+        do
+        {
+            key = getch();
+        }while(key != 10);
+    }
 }
 
 char dir_to_char(int dir)
